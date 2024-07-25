@@ -1,0 +1,52 @@
+version: "3.0"
+
+services:
+  redis-master:
+    image: redis:latest
+    container_name: redis-master
+    volumes:
+      - ./master/redis.conf:/usr/local/etc/redis/redis.conf
+      - masterData:/data
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+    networks:
+      - redisNet
+    ports:
+      - "13001:6379"
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "400MB"
+
+  redis-slave:
+      image: redis:latest
+      container_name: redis-slave
+      ports:
+        - "13002:6379"
+      volumes:
+        - ./slave/redis.conf:/usr/local/etc/redis/redis.conf
+      networks:
+        - redisNet
+      restart: "no"
+      command: redis-server /usr/local/etc/redis/redis.conf
+      depends_on:
+        - redis-master
+      environment:
+        - REDIS_MASTER_HOST=redis-master
+      deploy:
+        resources:
+          limits:
+            cpus: "0.5"
+            memory: "400MB"
+
+
+volumes:
+  masterData:
+    driver: local
+
+networks:
+  redisNet:
+    driver: bridge

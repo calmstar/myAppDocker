@@ -1,0 +1,60 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: go-app
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: mydatabase
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:latest
+    container_name: redis-cache
+    volumes:
+      - redisdata:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  dbdata:
+  redisdata:
+
+networks:
+  mynetwork:
+    driver: bridge
